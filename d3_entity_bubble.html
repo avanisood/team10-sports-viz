@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entity Bubble Chart - D3.js</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2C3E50;
+        }
+        .bubble {
+            cursor: move;
+        }
+        .bubble-label {
+            font-size: 10px;
+            font-weight: bold;
+            fill: white;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+        .tooltip {
+            position: absolute;
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 5px;
+            pointer-events: none;
+            font-size: 12px;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>The Entity Galaxy 🌌</h1>
+        <p style="text-align: center; color: #7f8c8d;">Named entities extracted from 520 prompts using Spacy NER. Bubble size represents entity frequency. Drag to rearrange!</p>
+        <div id="chart"></div>
+    </div>
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        const width = 1200;
+        const height = 700;
+        
+        const svg = d3.select('#chart')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height);
+        
+        const tooltip = d3.select('#tooltip');
+        
+        // Entity data (from spacy extraction)
+        const entities = [
+            {entity: 'NBA', sport: 'basketball', frequency: 116},
+            {entity: 'NFL', sport: 'football', frequency: 55},
+            {entity: 'India', sport: 'cricket', frequency: 45},
+            {entity: 'Pelé', sport: 'football', frequency: 43},
+            {entity: 'UCLA', sport: 'football', frequency: 41},
+            {entity: 'Wooden', sport: 'football', frequency: 33},
+            {entity: 'NCAA', sport: 'football', frequency: 33},
+            {entity: 'Santos', sport: 'football', frequency: 33},
+            {entity: 'NCAA (BB)', sport: 'basketball', frequency: 22},
+            {entity: 'England', sport: 'football', frequency: 20},
+            {entity: 'FIFA', sport: 'football', frequency: 18},
+            {entity: 'Brazil', sport: 'football', frequency: 16},
+            {entity: 'Europe', sport: 'football', frequency: 15},
+            {entity: 'Chicago', sport: 'basketball', frequency: 14},
+            {entity: 'Australia', sport: 'cricket', frequency: 13},
+            {entity: 'Pakistan', sport: 'cricket', frequency: 12},
+            {entity: 'Lakers', sport: 'basketball', frequency: 11},
+            {entity: 'Jordan', sport: 'basketball', frequency: 10},
+            {entity: 'Sachin', sport: 'cricket', frequency: 9},
+            {entity: 'Magnus', sport: 'chess', frequency: 8}
+        ];
+        
+        // Color scale
+        const colorScale = d3.scaleOrdinal()
+            .domain(['basketball', 'football', 'cricket', 'chess'])
+            .range(d3.schemeSet2);
+        
+        // Size scale
+        const sizeScale = d3.scaleSqrt()
+            .domain([0, d3.max(entities, d => d.frequency)])
+            .range([15, 80]);
+        
+        // Force simulation
+        const simulation = d3.forceSimulation(entities)
+            .force('charge', d3.forceManyBody().strength(5))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .force('collision', d3.forceCollide().radius(d => sizeScale(d.frequency) + 3));
+        
+        // Create bubble groups
+        const bubbles = svg.selectAll('.bubble')
+            .data(entities)
+            .enter().append('g')
+            .attr('class', 'bubble')
+            .call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended));
+        
+        // Add circles
+        bubbles.append('circle')
+            .attr('r', d => sizeScale(d.frequency))
+            .style('fill', d => colorScale(d.sport))
+            .style('opacity', 0.7)
+            .style('stroke', 'white')
+            .style('stroke-width', 2)
+            .on('mouseover', function(event, d) {
+                d3.select(this).style('opacity', 1).style('stroke-width', 4);
+                tooltip.style('opacity', 1)
+                    .html(`<strong>${d.entity}</strong><br/>Sport: ${d.sport}<br/>Frequency: ${d.frequency}`);
+            })
+            .on('mousemove', function(event) {
+                tooltip.style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+            })
+            .on('mouseout', function() {
+                d3.select(this).style('opacity', 0.7).style('stroke-width', 2);
+                tooltip.style('opacity', 0);
+            });
+        
+        // Add labels
+        bubbles.append('text')
+            .attr('class', 'bubble-label')
+            .text(d => d.entity)
+            .attr('dy', '0.35em')
+            .style('font-size', d => Math.min(sizeScale(d.frequency) / 3, 12) + 'px');
+        
+        // Update positions on tick
+        simulation.on('tick', () => {
+            bubbles.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+        
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+        
+        // Legend
+        const legend = svg.append('g')
+            .attr('transform', 'translate(50, 50)');
+        
+        legend.append('text')
+            .attr('x', 0)
+            .attr('y', -10)
+            .style('font-size', '14px')
+            .style('font-weight', 'bold')
+            .text('Sports:');
+        
+        const sports = ['basketball', 'football', 'cricket', 'chess'];
+        sports.forEach((sport, i) => {
+            const legendRow = legend.append('g')
+                .attr('transform', `translate(0, ${i * 30 + 10})`);
+            
+            legendRow.append('circle')
+                .attr('r', 10)
+                .style('fill', colorScale(sport))
+                .style('opacity', 0.7)
+                .style('stroke', 'white')
+                .style('stroke-width', 2);
+            
+            legendRow.append('text')
+                .attr('x', 20)
+                .attr('y', 5)
+                .text(sport.charAt(0).toUpperCase() + sport.slice(1))
+                .style('font-size', '14px')
+                .style('font-weight', 'bold');
+        });
+        
+        // Add size legend
+        const sizeLegend = svg.append('g')
+            .attr('transform', `translate(${width - 150}, 50)`);
+        
+        sizeLegend.append('text')
+            .attr('x', 0)
+            .attr('y', -10)
+            .style('font-size', '14px')
+            .style('font-weight', 'bold')
+            .text('Bubble Size:');
+        
+        const sizeExamples = [
+            {label: 'Low (< 20)', size: 20},
+            {label: 'Medium (20-50)', size: 40},
+            {label: 'High (50+)', size: 60}
+        ];
+        
+        sizeExamples.forEach((ex, i) => {
+            const row = sizeLegend.append('g')
+                .attr('transform', `translate(0, ${i * 35 + 15})`);
+            
+            row.append('circle')
+                .attr('r', ex.size / 4)
+                .style('fill', '#95a5a6')
+                .style('opacity', 0.5)
+                .style('stroke', 'white')
+                .style('stroke-width', 2);
+            
+            row.append('text')
+                .attr('x', 30)
+                .attr('y', 5)
+                .text(ex.label)
+                .style('font-size', '12px');
+        });
+        
+        // Add instructions
+        svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height - 20)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '13px')
+            .style('fill', '#7f8c8d')
+            .style('font-style', 'italic')
+            .text('💡 Hover over bubbles for details | Drag bubbles to reposition');
+    </script>
+</body>
+</html>

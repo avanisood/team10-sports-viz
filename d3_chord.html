@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chord Diagram - D3.js</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: visible;
+        }
+        #chart {
+            overflow: visible;
+        }
+        h1 {
+            text-align: center;
+            color: #2C3E50;
+        }
+        .chord path {
+            fill-opacity: 0.67;
+            stroke: #000;
+            stroke-width: 0.5px;
+        }
+        .chord path:hover {
+            fill-opacity: 0.9;
+        }
+        .tooltip {
+            position: absolute;
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 5px;
+            pointer-events: none;
+            font-size: 12px;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sports-Words Connection: Chord Diagram</h1>
+        <p style="text-align: center; color: #7f8c8d; margin-bottom: 20px;">
+            Visualizing shared vocabulary across sports. Each arc represents a sport; ribbons show word overlap.
+        </p>
+        <div id="chart"></div>
+    </div>
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        const width = 1200;
+        const height = 1000;
+        const outerRadius = Math.min(width, height) * 0.35;
+        const innerRadius = outerRadius - 30;
+        
+        const svg = d3.select('#chart')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .append('g')
+            .attr('transform', `translate(${width / 2 + 50},${height / 2})`);
+        
+        const tooltip = d3.select('#tooltip');
+        
+        // Matrix representing connections between sports
+        // Order: basketball, football, cricket, chess
+        const matrix = [
+            [0, 711, 200, 100],    // basketball to others
+            [711, 0, 300, 150],     // football to others
+            [200, 300, 0, 120],     // cricket to others
+            [100, 150, 120, 0]      // chess to others
+        ];
+        
+        const sports = ['Basketball', 'Football', 'Cricket', 'Chess'];
+        
+        // Create chord layout
+        const chord = d3.chord()
+            .padAngle(0.05)
+            .sortSubgroups(d3.descending);
+        
+        const arc = d3.arc()
+            .innerRadius(innerRadius)
+            .outerRadius(outerRadius);
+        
+        const ribbon = d3.ribbon()
+            .radius(innerRadius);
+        
+        const color = d3.scaleOrdinal()
+            .domain(d3.range(4))
+            .range(['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3']);
+        
+        const chords = chord(matrix);
+        
+        // Draw the groups (outer arcs)
+        const group = svg.append('g')
+            .selectAll('g')
+            .data(chords.groups)
+            .enter().append('g');
+        
+        group.append('path')
+            .style('fill', d => color(d.index))
+            .style('stroke', d => d3.rgb(color(d.index)).darker())
+            .attr('d', arc)
+            .on('mouseover', function(event, d) {
+                d3.select(this).style('opacity', 0.8);
+                tooltip.style('opacity', 1)
+                    .html(`<strong>${sports[d.index]}</strong><br/>Total connections: ${d.value}`);
+            })
+            .on('mousemove', function(event) {
+                tooltip.style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+            })
+            .on('mouseout', function() {
+                d3.select(this).style('opacity', 1);
+                tooltip.style('opacity', 0);
+            });
+        
+        // Add labels
+        group.append('text')
+            .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+            .attr('dy', '.35em')
+            .attr('transform', d => `
+                rotate(${(d.angle * 180 / Math.PI - 90)})
+                translate(${outerRadius + 26})
+                ${d.angle > Math.PI ? 'rotate(180)' : ''}
+            `)
+            .style('text-anchor', d => d.angle > Math.PI ? 'end' : null)
+            .text(d => sports[d.index])
+            .style('font-size', '16px')
+            .style('font-weight', 'bold')
+            .style('fill', d => color(d.index));
+        
+        // Draw the ribbons (connections)
+        svg.append('g')
+            .attr('class', 'chord')
+            .attr('fill-opacity', 0.67)
+            .selectAll('path')
+            .data(chords)
+            .enter().append('path')
+            .attr('d', ribbon)
+            .style('fill', d => color(d.target.index))
+            .style('stroke', d => d3.rgb(color(d.target.index)).darker())
+            .on('mouseover', function(event, d) {
+                d3.select(this).style('fill-opacity', 0.9);
+                tooltip.style('opacity', 1)
+                    .html(`<strong>${sports[d.source.index]} ↔ ${sports[d.target.index]}</strong><br/>Shared words: ${d.source.value}`);
+            })
+            .on('mousemove', function(event) {
+                tooltip.style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+            })
+            .on('mouseout', function() {
+                d3.select(this).style('fill-opacity', 0.67);
+                tooltip.style('opacity', 0);
+            });
+        
+        // Add title annotation
+        svg.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('y', -outerRadius - 40)
+            .style('font-size', '14px')
+            .style('fill', '#7f8c8d')
+            .text('Hover over arcs or ribbons to see connection details');
+        
+        // Add legend
+        const legendX = -outerRadius - 180;
+        const legendY = -outerRadius;
+        
+        const legend = svg.append('g')
+            .attr('transform', `translate(${legendX}, ${legendY})`);
+        
+        legend.append('text')
+            .attr('x', 0)
+            .attr('y', 0)
+            .style('font-size', '14px')
+            .style('font-weight', 'bold')
+            .text('Sport Colors:');
+        
+        sports.forEach((sport, i) => {
+            const legendRow = legend.append('g')
+                .attr('transform', `translate(0, ${i * 25 + 20})`);
+            
+            legendRow.append('rect')
+                .attr('width', 20)
+                .attr('height', 20)
+                .attr('rx', 3)
+                .style('fill', color(i))
+                .style('stroke', d3.rgb(color(i)).darker())
+                .style('stroke-width', 2);
+            
+            legendRow.append('text')
+                .attr('x', 30)
+                .attr('y', 15)
+                .text(sport)
+                .style('font-size', '13px')
+                .style('font-weight', 'bold');
+        });
+        
+        // Add interpretation guide
+        const guide = svg.append('g')
+            .attr('transform', `translate(${legendX}, ${legendY + 140})`);
+        
+        guide.append('text')
+            .attr('x', 0)
+            .attr('y', 0)
+            .style('font-size', '13px')
+            .style('font-weight', 'bold')
+            .text('How to Read:');
+        
+        guide.append('text')
+            .attr('x', 0)
+            .attr('y', 20)
+            .style('font-size', '11px')
+            .text('• Thicker ribbons = more')
+            .style('fill', '#555');
+        
+        guide.append('text')
+            .attr('x', 5)
+            .attr('y', 35)
+            .style('font-size', '11px')
+            .text('shared words')
+            .style('fill', '#555');
+        
+        guide.append('text')
+            .attr('x', 0)
+            .attr('y', 55)
+            .style('font-size', '11px')
+            .text('• Ribbon color matches')
+            .style('fill', '#555');
+        
+        guide.append('text')
+            .attr('x', 5)
+            .attr('y', 70)
+            .style('font-size', '11px')
+            .text('the target sport')
+            .style('fill', '#555');
+    </script>
+</body>
+</html>

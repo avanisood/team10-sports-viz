@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diverging Bar Chart - D3.js</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2C3E50;
+        }
+        .bar {
+            cursor: pointer;
+        }
+        .bar:hover {
+            opacity: 0.7;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #999;
+            shape-rendering: crispEdges;
+        }
+        .tooltip {
+            position: absolute;
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 5px;
+            pointer-events: none;
+            font-size: 12px;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cricket vs Football: Word Usage Comparison</h1>
+        <p style="text-align: center; color: #7f8c8d;">Top 10 most frequent words in Cricket prompts compared with their frequency in Football prompts</p>
+        <div id="chart"></div>
+    </div>
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        const margin = {top: 60, right: 100, bottom: 60, left: 100};
+        const width = 1200 - margin.left - margin.right;
+        const height = 700 - margin.top - margin.bottom;
+        
+        const svg = d3.select('#chart')
+            .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        const tooltip = d3.select('#tooltip');
+        
+        // Data
+        const words = [
+            {word: 'ball', cricket: 69, football: 38},
+            {word: 'first', cricket: 53, football: 153},
+            {word: 'team', cricket: 52, football: 259},
+            {word: 'world', cricket: 52, football: 131},
+            {word: 'played', cricket: 47, football: 123},
+            {word: 'india', cricket: 47, football: 1},
+            {word: 'game', cricket: 46, football: 96},
+            {word: 'international', cricket: 46, football: 33},
+            {word: 'match', cricket: 44, football: 55},
+            {word: 'wicket', cricket: 43, football: 0}
+        ];
+        
+        const maxVal = d3.max(words, d => Math.max(d.cricket, d.football));
+        
+        // Scales
+        const xScale = d3.scaleLinear()
+            .domain([-maxVal - 20, maxVal + 20])
+            .range([0, width]);
+        
+        const yScale = d3.scaleBand()
+            .domain(words.map(d => d.word))
+            .range([0, height])
+            .padding(0.2);
+        
+        // Axes
+        svg.append('g')
+            .attr('class', 'axis')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(xScale).tickFormat(d => Math.abs(d)));
+        
+        svg.append('g')
+            .attr('class', 'axis')
+            .attr('transform', `translate(${xScale(0)},0)`)
+            .call(d3.axisLeft(yScale))
+            .selectAll('text')
+            .style('font-weight', 'bold')
+            .style('font-size', '13px');
+        
+        // Center line
+        svg.append('line')
+            .attr('x1', xScale(0))
+            .attr('x2', xScale(0))
+            .attr('y1', 0)
+            .attr('y2', height)
+            .style('stroke', 'black')
+            .style('stroke-width', 2);
+        
+        // Cricket bars (left, negative)
+        svg.selectAll('.bar-cricket')
+            .data(words)
+            .enter().append('rect')
+            .attr('class', 'bar bar-cricket')
+            .attr('x', d => xScale(-d.cricket))
+            .attr('y', d => yScale(d.word))
+            .attr('width', d => xScale(0) - xScale(-d.cricket))
+            .attr('height', yScale.bandwidth())
+            .style('fill', '#D32F2F')
+            .style('opacity', 0.8)
+            .on('mouseover', function(event, d) {
+                d3.select(this).style('opacity', 1);
+                tooltip.style('opacity', 1)
+                    .html(`<strong>Cricket: ${d.word}</strong><br/>Frequency: ${d.cricket}`);
+            })
+            .on('mousemove', function(event) {
+                tooltip.style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+            })
+            .on('mouseout', function() {
+                d3.select(this).style('opacity', 0.8);
+                tooltip.style('opacity', 0);
+            });
+        
+        // Football bars (right, positive)
+        svg.selectAll('.bar-football')
+            .data(words)
+            .enter().append('rect')
+            .attr('class', 'bar bar-football')
+            .attr('x', xScale(0))
+            .attr('y', d => yScale(d.word))
+            .attr('width', d => xScale(d.football) - xScale(0))
+            .attr('height', yScale.bandwidth())
+            .style('fill', '#1976D2')
+            .style('opacity', 0.8)
+            .on('mouseover', function(event, d) {
+                d3.select(this).style('opacity', 1);
+                tooltip.style('opacity', 1)
+                    .html(`<strong>Football: ${d.word}</strong><br/>Frequency: ${d.football}`);
+            })
+            .on('mousemove', function(event) {
+                tooltip.style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+            })
+            .on('mouseout', function() {
+                d3.select(this).style('opacity', 0.8);
+                tooltip.style('opacity', 0);
+            });
+        
+        // Labels
+        svg.append('rect')
+            .attr('x', xScale(-maxVal * 0.7) - 50)
+            .attr('y', -40)
+            .attr('width', 100)
+            .attr('height', 30)
+            .attr('rx', 5)
+            .style('fill', 'white')
+            .style('stroke', '#D32F2F')
+            .style('stroke-width', 2);
+        
+        svg.append('text')
+            .attr('x', xScale(-maxVal * 0.7))
+            .attr('y', -20)
+            .text('CRICKET')
+            .style('fill', '#D32F2F')
+            .style('font-weight', 'bold')
+            .style('font-size', '16px')
+            .attr('text-anchor', 'middle');
+        
+        svg.append('rect')
+            .attr('x', xScale(maxVal * 0.7) - 50)
+            .attr('y', -40)
+            .attr('width', 100)
+            .attr('height', 30)
+            .attr('rx', 5)
+            .style('fill', 'white')
+            .style('stroke', '#1976D2')
+            .style('stroke-width', 2);
+        
+        svg.append('text')
+            .attr('x', xScale(maxVal * 0.7))
+            .attr('y', -20)
+            .text('FOOTBALL')
+            .style('fill', '#1976D2')
+            .style('font-weight', 'bold')
+            .style('font-size', '16px')
+            .attr('text-anchor', 'middle');
+        
+        // Add X-axis label
+        svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height + 40)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '14px')
+            .style('font-weight', 'bold')
+            .style('fill', '#2C3E50')
+            .text('Word Frequency (count)');
+        
+        // Add Y-axis label
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -height / 2)
+            .attr('y', -70)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '14px')
+            .style('font-weight', 'bold')
+            .style('fill', '#2C3E50')
+            .text('Word');
+        
+        // Add annotation explaining the visualization
+        svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height + 55)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '11px')
+            .style('fill', '#7f8c8d')
+            .text('← Cricket uses more | Football uses more →');
+    </script>
+</body>
+</html>
