@@ -3,7 +3,7 @@
 ### Domain: Sports
 **Project Type:** Data Visualization & Text Analysis  
 **Dataset:** 520 user prompts across 4 sports (Basketball, Football, Cricket, Chess)  
-**Live Website:** [Open team10_index.html]
+**Live Website:** https://avanisood.github.io/team10-sports-viz/
 
 ---
 
@@ -88,8 +88,8 @@ We moved beyond simple counting to analyze:
 * No server required - all files run client-side
 
 ### Step 1: Open the Dashboard
-1. Navigate to the `project_2` folder
-2. Open `team10_index.html` in your web browser
+1. Navigate to the project directory
+2. Open `index.html` in your web browser
 3. All 6 visualizations are embedded with preview thumbnails
 4. Click "View Full Screen" on any visualization for detailed interaction
 
@@ -114,7 +114,7 @@ d3_chord.html
 ```
 project_2/
 │
-├── team10_index.html              # Main landing page with all visualizations
+├── index.html                     # Main landing page with all visualizations
 ├── clean_sports_data.csv          # Dataset: 520 sports prompts
 │
 ├── d3_sankey.html                 # Visualization 1: Sankey Diagram
@@ -164,21 +164,14 @@ project_2/
 ## 🏅 Team Information
 
 **Team Name:** Team 10  
+**Team Members:** Avani Sood 
+                  Tanishi Tyagi
+                  Poreddy Srivatsav Reddy
 **Project:** Sports Data Analysis & Interactive Visualizations  
 **Technologies:** Python, D3.js, HTML5, CSS3, NLP (TextBlob, Spacy)
 
 ---
 
-## 📝 Future Enhancements
-
-- [ ] Add Python analysis scripts to repository
-- [ ] Implement real-time data updates
-- [ ] Add more sports categories (Tennis, Baseball, etc.)
-- [ ] Create downloadable reports
-- [ ] Add data filtering controls to dashboard
-- [ ] Deploy to GitHub Pages for online access
-
----
 
 ## 📄 License
 
